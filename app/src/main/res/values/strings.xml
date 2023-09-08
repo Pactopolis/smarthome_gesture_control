@@ -20,6 +20,8 @@
         <item>Number \'8\'</item>
         <item>Number \'9\'</item>
     </string-array>
+    <string name="replay_button">Replay</string>
+    <string name="practice_button">Practice</string>
     <string name="title_activity_selected_gesture">SelectedGestureActivity</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>
@@ -63,4 +65,5 @@
         libero vel nunc consequat, quis tincidunt nisl eleifend. Cras bibendum enim a justo luctus
         vestibulum. Fusce dictum libero quis erat maximus, vitae volutpat diam dignissim.
     </string>
+    <string name="title_activity_practice">PracticeActivity</string>
 </resources>
