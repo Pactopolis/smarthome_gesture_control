@@ -13,17 +13,11 @@ import androidx.camera.video.VideoCapture;
 import androidx.camera.video.VideoRecordEvent;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
-import androidx.loader.content.CursorLoader;
-
-import android.content.ContentResolver;
 import android.content.ContentValues;
-import android.database.Cursor;
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
-import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
@@ -32,7 +26,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 
 import java.io.BufferedReader;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -45,8 +38,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
 public class CameraActivity extends AppCompatActivity {
-    ExecutorService service;
-    Handler handler;
     Recording recording = null;
     VideoCapture<Recorder> videoCapture = null;
     private PreviewView previewView;
