@@ -2,6 +2,7 @@ package com.example.smarthomegesturecontrol;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.widget.Toast;
@@ -31,7 +32,10 @@ public class PracticeActivity extends AppCompatActivity {
         if (false == hasCameraPermission()) {
             requestCameraPermission();
         }
-
+        else {
+            Intent intent = new Intent(this, CameraActivity.class);
+            startActivity(intent);
+        }
     }
 
     private boolean checkForCamera(Context context) {
