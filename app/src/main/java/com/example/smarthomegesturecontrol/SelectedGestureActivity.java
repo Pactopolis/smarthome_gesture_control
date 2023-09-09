@@ -1,24 +1,17 @@
 package com.example.smarthomegesturecontrol;
 
 import android.content.Intent;
-import android.gesture.Gesture;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Spinner;
-import android.widget.TextView;
 import android.widget.VideoView;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.smarthomegesturecontrol.databinding.ActivitySelectedGestureBinding;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
 public class SelectedGestureActivity extends AppCompatActivity {
     private ActivitySelectedGestureBinding binding;

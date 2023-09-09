@@ -6,10 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
-import android.widget.ListPopupWindow;
 import android.widget.Spinner;
-import java.lang.reflect.Field;
 
 public class MainActivity extends AppCompatActivity {
     String[] gestureArray;

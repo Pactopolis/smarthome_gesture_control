@@ -16,7 +16,6 @@ import android.os.Handler;
 import android.util.Size;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
