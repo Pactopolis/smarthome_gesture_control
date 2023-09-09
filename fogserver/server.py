@@ -16,21 +16,13 @@ def testpost():
 
 @app.route('/api/v1/upload', methods=['POST'])
 def upload():
-    print('A: upload() called')
-
     key = ''
     for x in request.files:
-        print('B:', x)
         key = x
     
     value = request.files[key]
-    print('C: ', type(value))
-
     filename = value.filename
-    print('D: ' + filename)
-
     value.save(secure_filename(filename))
-    print('E: Saved!')
 
     res = {'response': 200}
     return res

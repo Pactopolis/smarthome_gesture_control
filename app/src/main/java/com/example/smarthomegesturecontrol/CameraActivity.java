@@ -1,6 +1,7 @@
 package com.example.smarthomegesturecontrol;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
@@ -14,6 +15,7 @@ import androidx.camera.video.VideoRecordEvent;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 import android.content.ContentValues;
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -21,6 +23,7 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
+import android.widget.TextView;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
@@ -32,8 +35,6 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.text.SimpleDateFormat;
-import java.util.Locale;
 import java.util.concurrent.ExecutionException;
 
 public class CameraActivity extends AppCompatActivity {
@@ -46,12 +47,16 @@ public class CameraActivity extends AppCompatActivity {
     VideoCapture<Recorder> videoCapture = null;
     private PreviewView previewView;
     private Button recordButton;
+    private Button uploadButton;
+    private TextView countdownTextView;
     private String fileName;
+    private String filePath;
+    private final String serverPath = "http://10.0.2.2:5000/api/v1/upload";
     final int cameraFacing = CameraSelector.LENS_FACING_FRONT;
 
     // TODO: we should probably make this a separate service with its own class
     private final int maxRecordingInterval = 5000; // 5 seconds
-    private final int recordingInterval = 1100;
+    private final int recordingInterval = 1000;
     private int recordingCount;
     private Handler recordingHandle = new Handler();
     private Runnable recordingRunnable = new Runnable() {
@@ -59,10 +64,12 @@ public class CameraActivity extends AppCompatActivity {
         public void run() {
             if (recordingCount >= maxRecordingInterval) {
                 System.out.println("captureVideo(): DONE RECORDING!");
+                countdownTextView.setVisibility(TextView.INVISIBLE);
                 recording.stop();
             }
             else {
                 System.out.println("captureVideo(): IN RUNNABLE: " + Integer.toString(recordingCount));
+                countdownTextView.setText(Integer.toString((maxRecordingInterval - recordingCount) / 1000));
                 recordingCount += recordingInterval;
                 recordingHandle.postDelayed(recordingRunnable, recordingInterval);
             }
@@ -81,10 +88,28 @@ public class CameraActivity extends AppCompatActivity {
 
         previewView = findViewById(R.id.previewView);
 
+        countdownTextView = findViewById(R.id.counterTextView);
+        countdownTextView.setVisibility(Button.INVISIBLE);
+        countdownTextView.setText(Integer.toString(maxRecordingInterval / 1000));
+
+        uploadButton = findViewById(R.id.uploadButton);
+        uploadButton.setVisibility(Button.INVISIBLE);
+        uploadButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                new UploadVideo().execute();
+
+                Intent intent = new Intent(CameraActivity.this, MainActivity.class);
+                startActivity(intent);
+            }
+        });
+
         recordButton = (Button) findViewById(R.id.recordButton);
         recordButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                recordButton.setVisibility(Button.INVISIBLE);
+                countdownTextView.setVisibility(Button.VISIBLE);
                 // record
                 captureVideo();
 
@@ -163,20 +188,19 @@ public class CameraActivity extends AppCompatActivity {
 
                         // get video uri
                         String[] fileList;
-                        String finalPath = "";
                         final String videosPath = Environment.getExternalStorageDirectory() + "/Movies/CameraX-Video";
                         File videoFiles = new File(videosPath);
                         if (videoFiles.isDirectory()) {
                             fileList = videoFiles.list();
                             for (int i = 0; i < fileList.length; i++) {
                                 if (0 == fileList[i].compareTo((fileName + ".mp4"))) {
-                                    finalPath = videosPath + "/" + fileList[i];
+                                    filePath = videosPath + "/" + fileList[i];
                                     break;
                                 }
                             }
                         }
 
-                        new UploadVideo().execute(finalPath, "http://10.0.2.2:5000/api/v1/upload");
+                        uploadButton.setVisibility(View.VISIBLE);
                     }
                     else {
                         System.out.println("captureVideo(): Recording obj is null");
@@ -192,8 +216,8 @@ public class CameraActivity extends AppCompatActivity {
     public class UploadVideo extends AsyncTask<String, Void, Void> {
         @Override
         public Void doInBackground(String ...params) {
-            String videoUri = params[0];
-            String serverUrl = params[1];
+            String videoUri = filePath;
+            String serverUrl = serverPath;
             String fullFileName = fileName + ".mp4";
 
             File sourceFile = new File(videoUri);
