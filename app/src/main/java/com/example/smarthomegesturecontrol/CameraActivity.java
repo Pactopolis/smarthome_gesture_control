@@ -13,16 +13,32 @@ import androidx.camera.video.VideoCapture;
 import androidx.camera.video.VideoRecordEvent;
 import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
+import androidx.loader.content.CursorLoader;
 
+import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.view.View;
 import android.widget.Button;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
@@ -30,10 +46,12 @@ import java.util.concurrent.ExecutorService;
 
 public class CameraActivity extends AppCompatActivity {
     ExecutorService service;
+    Handler handler;
     Recording recording = null;
     VideoCapture<Recorder> videoCapture = null;
     private PreviewView previewView;
     private Button recordButton;
+    private String fileName;
     final int cameraFacing = CameraSelector.LENS_FACING_FRONT;
 
     // TODO: we should probably make this a separate service with its own class
@@ -122,7 +140,7 @@ public class CameraActivity extends AppCompatActivity {
             return;
         }
 
-        String fileName = new SimpleDateFormat(
+        fileName = new SimpleDateFormat(
                 "yyyy-MM-dd-HH-mm-ss-SSS",
                 Locale.getDefault()).format(System.currentTimeMillis());
 
@@ -144,6 +162,23 @@ public class CameraActivity extends AppCompatActivity {
                     System.out.println("captureVideo(): Video finalized!");
                     if (false == ((VideoRecordEvent.Finalize) videoRecordEvent).hasError()) {
                         System.out.println("captureVideo(): Video captured!");
+
+                        // get video uri
+                        String[] fileList;
+                        String finalPath = "";
+                        final String videosPath = Environment.getExternalStorageDirectory() + "/Movies/CameraX-Video";
+                        File videoFiles = new File(videosPath);
+                        if (videoFiles.isDirectory()) {
+                            fileList = videoFiles.list();
+                            for (int i = 0; i < fileList.length; i++) {
+                                if (0 == fileList[i].compareTo((fileName + ".mp4"))) {
+                                    finalPath = videosPath + "/" + fileList[i];
+                                    break;
+                                }
+                            }
+                        }
+
+                        new UploadVideo().execute(finalPath, "http://10.0.2.2:5000/api/v1/upload");
                     }
                     else {
                         System.out.println("captureVideo(): Recording obj is null");
@@ -154,5 +189,91 @@ public class CameraActivity extends AppCompatActivity {
                     }
                 }
         });
+    }
+
+    public class UploadVideo extends AsyncTask<String, Void, Void> {
+        @Override
+        public Void doInBackground(String ...params) {
+            String videoUri = params[0];
+            String serverUrl = params[1];
+
+            File sourceFile = new File(videoUri);
+            if (!sourceFile.exists()) {
+                System.out.println("captureVideo(): file does not exist");
+                // TODO: what to do?
+            }
+
+            try {
+                HttpURLConnection conn = null;
+                DataOutputStream dos = null;
+                DataInputStream inStream = null;
+
+                String lineEnd = "\r\n";
+                String twoHyphens = "--";
+                String boundary = "*****";
+
+                int bytesRead, bytesAvailable, bufferSize;
+                byte[] buffer;
+                final int maxBufferSize = 1 * 1024 * 1024;
+                String responseFromServer = "";
+
+                FileInputStream fileInputStream = new FileInputStream(sourceFile);
+                URL url = new URL(serverUrl);
+
+                conn = (HttpURLConnection) url.openConnection();
+                conn.setDoInput(true);
+                conn.setDoOutput(true);
+                conn.setUseCaches(false);
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Connection", "Keep-Alive");
+                conn.setRequestProperty("ENCTYPE", "multipart/form-data");
+                conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+                conn.setRequestProperty("uploaded_file", videoUri);
+
+                dos = new DataOutputStream(conn.getOutputStream());
+
+                dos.writeBytes(twoHyphens + boundary + lineEnd);
+                dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\""+ videoUri + "\"" + lineEnd);
+                dos.writeBytes(lineEnd);
+
+                bytesAvailable = fileInputStream.available();
+
+                bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                buffer = new byte[bufferSize];
+
+                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+                while (bytesRead > 0) {
+                    dos.write(buffer, 0, bufferSize);
+                    bytesAvailable = fileInputStream.available();
+                    bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                    bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+                }
+
+                dos.writeBytes(lineEnd);
+                dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+
+                int serverResponseCode = conn.getResponseCode();
+                String serverResponseMessage = conn.getResponseMessage();
+                System.out.println("captureVideo(): serverResponseCode --> " + serverResponseCode);
+                System.out.println("captureVideo(): serverResponseMessage --> " + serverResponseMessage);
+
+                fileInputStream.close();
+                dos.flush();
+                dos.close();
+
+                BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                String line;
+                while ((line = rd.readLine()) != null) {
+                    System.out.println("captureVideo(): line read --> " + line);
+                }
+                rd.close();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return null;
+        }
     }
 }
