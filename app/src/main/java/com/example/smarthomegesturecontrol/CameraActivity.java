@@ -35,9 +35,13 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
 
 public class CameraActivity extends AppCompatActivity {
+    Bundle bundle;
+    String gestureName;
+    String userName;
+    String practiceNumber;
+
     Recording recording = null;
     VideoCapture<Recorder> videoCapture = null;
     private PreviewView previewView;
@@ -69,6 +73,11 @@ public class CameraActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
+
+        bundle = getIntent().getExtras();
+        gestureName = bundle.getString("gesture");
+        userName = bundle.getString("name");
+        practiceNumber = Integer.toString(bundle.getInt("count"));
 
         previewView = findViewById(R.id.previewView);
 
@@ -131,9 +140,7 @@ public class CameraActivity extends AppCompatActivity {
             return;
         }
 
-        fileName = new SimpleDateFormat(
-                "yyyy-MM-dd-HH-mm-ss-SSS",
-                Locale.getDefault()).format(System.currentTimeMillis());
+        fileName = gestureName + "_PRACTICE_" + practiceNumber + "_" + userName;
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
@@ -187,6 +194,7 @@ public class CameraActivity extends AppCompatActivity {
         public Void doInBackground(String ...params) {
             String videoUri = params[0];
             String serverUrl = params[1];
+            String fullFileName = fileName + ".mp4";
 
             File sourceFile = new File(videoUri);
             if (!sourceFile.exists()) {
@@ -219,12 +227,12 @@ public class CameraActivity extends AppCompatActivity {
                 conn.setRequestProperty("Connection", "Keep-Alive");
                 conn.setRequestProperty("ENCTYPE", "multipart/form-data");
                 conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-                conn.setRequestProperty("uploaded_file", videoUri);
+                conn.setRequestProperty("uploaded_file", fullFileName);
 
                 dos = new DataOutputStream(conn.getOutputStream());
 
                 dos.writeBytes(twoHyphens + boundary + lineEnd);
-                dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\""+ videoUri + "\"" + lineEnd);
+                dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\""+ fullFileName + "\"" + lineEnd);
                 dos.writeBytes(lineEnd);
 
                 bytesAvailable = fileInputStream.available();

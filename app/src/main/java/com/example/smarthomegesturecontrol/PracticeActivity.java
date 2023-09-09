@@ -15,6 +15,7 @@ import com.example.smarthomegesturecontrol.databinding.ActivityPracticeBinding;
 
 public class PracticeActivity extends AppCompatActivity {
     private ActivityPracticeBinding binding;
+    Bundle bundle;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -22,6 +23,8 @@ public class PracticeActivity extends AppCompatActivity {
 
         binding = ActivityPracticeBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        bundle = getIntent().getExtras();
 
         // check for camera
         if (false == checkForCamera(this)) {
@@ -34,6 +37,7 @@ public class PracticeActivity extends AppCompatActivity {
         }
         else {
             Intent intent = new Intent(this, CameraActivity.class);
+            intent.putExtras(bundle);
             startActivity(intent);
         }
     }

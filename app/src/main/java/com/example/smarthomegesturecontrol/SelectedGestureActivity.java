@@ -16,13 +16,16 @@ import java.util.Map;
 public class SelectedGestureActivity extends AppCompatActivity {
     private ActivitySelectedGestureBinding binding;
 
+
     private class GestureMeta {
          public String url;
          public String name;
+         public int count;
 
          GestureMeta(String url, String name) {
              this.url = url;
              this.name = name;
+             count = 0;
          }
     };
     Map<String, GestureMeta> gestureMap = new HashMap<String, GestureMeta>();
@@ -94,6 +97,11 @@ public class SelectedGestureActivity extends AppCompatActivity {
 
                 Bundle bundle = new Bundle();
                 bundle.putString("gesture", gestureMap.get(gesture).name);
+                // TODO: don't hardcode the name
+                bundle.putString("name", "Palmasani");
+                gestureMap.get(gesture).count++;
+                bundle.putInt("count", gestureMap.get(gesture).count);
+
                 Intent intent = new Intent(SelectedGestureActivity.this, PracticeActivity.class);
                 intent.putExtras(bundle);
                 startActivity(intent);
