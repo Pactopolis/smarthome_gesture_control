@@ -1,7 +1,6 @@
 package com.example.smarthomegesturecontrol;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.camera.core.Camera;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.Preview;
 import androidx.camera.lifecycle.ProcessCameraProvider;
@@ -16,6 +15,7 @@ import androidx.camera.view.PreviewView;
 import androidx.core.content.ContextCompat;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Environment;
@@ -41,7 +41,6 @@ public class CameraActivity extends AppCompatActivity {
     Bundle bundle;
     String gestureName;
     String userName;
-    String practiceNumber;
 
     Recording recording = null;
     VideoCapture<Recorder> videoCapture = null;
@@ -54,7 +53,6 @@ public class CameraActivity extends AppCompatActivity {
     private final String serverPath = "http://10.0.2.2:5000/api/v1/upload";
     final int cameraFacing = CameraSelector.LENS_FACING_FRONT;
 
-    // TODO: we should probably make this a separate service with its own class
     private final int maxRecordingInterval = 5000; // 5 seconds
     private final int recordingInterval = 1000;
     private int recordingCount;
@@ -78,13 +76,14 @@ public class CameraActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        System.out.println("cam_act: onCreate()");
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
 
         bundle = getIntent().getExtras();
         gestureName = bundle.getString("gesture");
         userName = bundle.getString("name");
-        practiceNumber = Integer.toString(bundle.getInt("count"));
 
         previewView = findViewById(R.id.previewView);
 
@@ -97,6 +96,8 @@ public class CameraActivity extends AppCompatActivity {
         uploadButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                System.out.println("cam_act: upload OnClick()");
+
                 new UploadVideo().execute();
 
                 Intent intent = new Intent(CameraActivity.this, MainActivity.class);
@@ -108,6 +109,8 @@ public class CameraActivity extends AppCompatActivity {
         recordButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                System.out.println("cam_act: record OnClick()");
+
                 recordButton.setVisibility(Button.INVISIBLE);
                 countdownTextView.setVisibility(Button.VISIBLE);
                 // record
@@ -123,6 +126,8 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     public void startCamera() {
+        System.out.println("cam_act: startCamera()");
+
         ListenableFuture<ProcessCameraProvider> processCameraProvider
                 = ProcessCameraProvider.getInstance(CameraActivity.this);
 
@@ -157,6 +162,8 @@ public class CameraActivity extends AppCompatActivity {
     }
 
     public void captureVideo() {
+        System.out.println("cam_act: captureVideo()");
+
         Recording rec = recording;
         if (rec != null) {
             rec.stop();
@@ -165,7 +172,20 @@ public class CameraActivity extends AppCompatActivity {
             return;
         }
 
-        fileName = gestureName + "_PRACTICE_" + practiceNumber + "_" + userName;
+        // increment cache
+        int currentCount = this.getSharedPreferences(
+                "constraint_cache",
+                this.MODE_PRIVATE
+        ).getInt(gestureName, 1);
+
+        SharedPreferences.Editor editor = this.getSharedPreferences(
+                "constraint_cache",
+                this.MODE_PRIVATE
+        ).edit();
+        editor.putInt(gestureName, currentCount + 1);
+        editor.commit();
+
+        fileName = gestureName + "_PRACTICE_" + currentCount + "_" + userName;
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
@@ -199,7 +219,6 @@ public class CameraActivity extends AppCompatActivity {
                                 }
                             }
                         }
-
                         uploadButton.setVisibility(View.VISIBLE);
                     }
                     else {
@@ -216,6 +235,8 @@ public class CameraActivity extends AppCompatActivity {
     public class UploadVideo extends AsyncTask<String, Void, Void> {
         @Override
         public Void doInBackground(String ...params) {
+            System.out.println("cam_act: UploadVideo doInBackground()");
+
             String videoUri = filePath;
             String serverUrl = serverPath;
             String fullFileName = fileName + ".mp4";
@@ -223,77 +244,76 @@ public class CameraActivity extends AppCompatActivity {
             File sourceFile = new File(videoUri);
             if (!sourceFile.exists()) {
                 System.out.println("captureVideo(): file does not exist");
-                // TODO: what to do?
             }
+            else {
+                try {
+                    HttpURLConnection conn = null;
+                    DataOutputStream dos = null;
+                    DataInputStream inStream = null;
 
-            try {
-                HttpURLConnection conn = null;
-                DataOutputStream dos = null;
-                DataInputStream inStream = null;
+                    String lineEnd = "\r\n";
+                    String twoHyphens = "--";
+                    String boundary = "*****";
 
-                String lineEnd = "\r\n";
-                String twoHyphens = "--";
-                String boundary = "*****";
+                    int bytesRead, bytesAvailable, bufferSize;
+                    byte[] buffer;
+                    final int maxBufferSize = 1 * 1024 * 1024;
+                    String responseFromServer = "";
 
-                int bytesRead, bytesAvailable, bufferSize;
-                byte[] buffer;
-                final int maxBufferSize = 1 * 1024 * 1024;
-                String responseFromServer = "";
+                    FileInputStream fileInputStream = new FileInputStream(sourceFile);
+                    URL url = new URL(serverUrl);
 
-                FileInputStream fileInputStream = new FileInputStream(sourceFile);
-                URL url = new URL(serverUrl);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setDoInput(true);
+                    conn.setDoOutput(true);
+                    conn.setUseCaches(false);
+                    conn.setRequestMethod("POST");
+                    conn.setRequestProperty("Connection", "Keep-Alive");
+                    conn.setRequestProperty("ENCTYPE", "multipart/form-data");
+                    conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+                    conn.setRequestProperty("uploaded_file", fullFileName);
 
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setDoInput(true);
-                conn.setDoOutput(true);
-                conn.setUseCaches(false);
-                conn.setRequestMethod("POST");
-                conn.setRequestProperty("Connection", "Keep-Alive");
-                conn.setRequestProperty("ENCTYPE", "multipart/form-data");
-                conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-                conn.setRequestProperty("uploaded_file", fullFileName);
+                    dos = new DataOutputStream(conn.getOutputStream());
 
-                dos = new DataOutputStream(conn.getOutputStream());
+                    dos.writeBytes(twoHyphens + boundary + lineEnd);
+                    dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + fullFileName + "\"" + lineEnd);
+                    dos.writeBytes(lineEnd);
 
-                dos.writeBytes(twoHyphens + boundary + lineEnd);
-                dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\""+ fullFileName + "\"" + lineEnd);
-                dos.writeBytes(lineEnd);
-
-                bytesAvailable = fileInputStream.available();
-
-                bufferSize = Math.min(bytesAvailable, maxBufferSize);
-                buffer = new byte[bufferSize];
-
-                bytesRead = fileInputStream.read(buffer, 0, bufferSize);
-
-                while (bytesRead > 0) {
-                    dos.write(buffer, 0, bufferSize);
                     bytesAvailable = fileInputStream.available();
+
                     bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                    buffer = new byte[bufferSize];
+
                     bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+
+                    while (bytesRead > 0) {
+                        dos.write(buffer, 0, bufferSize);
+                        bytesAvailable = fileInputStream.available();
+                        bufferSize = Math.min(bytesAvailable, maxBufferSize);
+                        bytesRead = fileInputStream.read(buffer, 0, bufferSize);
+                    }
+
+                    dos.writeBytes(lineEnd);
+                    dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+
+                    int serverResponseCode = conn.getResponseCode();
+                    String serverResponseMessage = conn.getResponseMessage();
+                    System.out.println("captureVideo(): serverResponseCode --> " + serverResponseCode);
+                    System.out.println("captureVideo(): serverResponseMessage --> " + serverResponseMessage);
+
+                    fileInputStream.close();
+                    dos.flush();
+                    dos.close();
+
+                    BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    String line;
+                    while ((line = rd.readLine()) != null) {
+                        System.out.println("captureVideo(): line read --> " + line);
+                    }
+                    rd.close();
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-
-                dos.writeBytes(lineEnd);
-                dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
-
-                int serverResponseCode = conn.getResponseCode();
-                String serverResponseMessage = conn.getResponseMessage();
-                System.out.println("captureVideo(): serverResponseCode --> " + serverResponseCode);
-                System.out.println("captureVideo(): serverResponseMessage --> " + serverResponseMessage);
-
-                fileInputStream.close();
-                dos.flush();
-                dos.close();
-
-                BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                String line;
-                while ((line = rd.readLine()) != null) {
-                    System.out.println("captureVideo(): line read --> " + line);
-                }
-                rd.close();
-            }
-            catch (Exception e) {
-                e.printStackTrace();
             }
 
             return null;

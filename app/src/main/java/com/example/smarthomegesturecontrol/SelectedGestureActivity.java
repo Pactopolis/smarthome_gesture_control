@@ -10,8 +10,6 @@ import android.widget.VideoView;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.smarthomegesturecontrol.databinding.ActivitySelectedGestureBinding;
 
-import com.example.smarthomegesturecontrol.GesturesTracker;
-
 public class SelectedGestureActivity extends AppCompatActivity {
     private ActivitySelectedGestureBinding binding;
 
@@ -20,7 +18,6 @@ public class SelectedGestureActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // TODO: what is this?
         binding = ActivitySelectedGestureBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
@@ -48,10 +45,7 @@ public class SelectedGestureActivity extends AppCompatActivity {
 
                 Bundle bundle = new Bundle();
                 bundle.putString("gesture", gesturesTracker.getName(gesture));
-                // TODO: don't hardcode the name
-                bundle.putString("name", "Palmasani");
-                gesturesTracker.addCount(gesture);
-                bundle.putInt("count", gesturesTracker.getCount(gesture));
+                bundle.putString("name", getResources().getString(R.string.last_name));
 
                 Intent intent = new Intent(SelectedGestureActivity.this, PracticeActivity.class);
                 intent.putExtras(bundle);

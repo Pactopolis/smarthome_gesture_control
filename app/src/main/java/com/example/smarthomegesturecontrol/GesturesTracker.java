@@ -1,9 +1,5 @@
 package com.example.smarthomegesturecontrol;
 
-import androidx.annotation.Nullable;
-
-import org.jetbrains.annotations.Contract;
-
 public class GesturesTracker {
     private static GestureMeta[] gestureObjList;
     
@@ -84,13 +80,11 @@ public class GesturesTracker {
         public String key;
         public String url;
         public String name;
-        public int count;
 
         GestureMeta(String key, String url, String name) {
             this.key = key;
             this.url = url;
             this.name = name;
-            count = 0;
         }
     };
 
@@ -111,19 +105,5 @@ public class GesturesTracker {
         GestureMeta obj = findObj(key);
         if (obj != null) return obj.url;
         else return "";
-    }
-
-    public int getCount(String key) {
-        GestureMeta obj = findObj(key);
-        if (obj != null) return obj.count;
-        else return -1;
-    }
-
-    public void addCount(String key) {
-        for (GestureMeta obj : gestureObjList) {
-            if (0 == key.compareTo(obj.key)) {
-                obj.count += 1;
-            }
-        }
     }
 }

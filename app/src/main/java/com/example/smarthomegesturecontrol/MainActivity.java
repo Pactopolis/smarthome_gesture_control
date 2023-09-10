@@ -9,15 +9,12 @@ import android.widget.AdapterView;
 import android.widget.Spinner;
 
 public class MainActivity extends AppCompatActivity {
-    String[] gestureArray;
     Spinner spinner;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        // TODO: restrict size of spinner
     }
 
     @Override

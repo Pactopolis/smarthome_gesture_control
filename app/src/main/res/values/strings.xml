@@ -20,6 +20,7 @@
         <item>Number \'8\'</item>
         <item>Number \'9\'</item>
     </string-array>
+    <string name="last_name">Palmasani</string>
     <string name="replay_button">Replay</string>
     <string name="practice_button">Practice</string>
     <string name="title_activity_selected_gesture">SelectedGestureActivity</string>

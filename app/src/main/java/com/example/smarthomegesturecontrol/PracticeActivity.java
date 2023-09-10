@@ -7,8 +7,10 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
 import com.example.smarthomegesturecontrol.databinding.ActivityPracticeBinding;
@@ -33,7 +35,7 @@ public class PracticeActivity extends AppCompatActivity {
 
         // check for permissions
         if (false == hasCameraPermission()) {
-            requestCameraPermission();
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
         }
         else {
             Intent intent = new Intent(this, CameraActivity.class);
@@ -49,13 +51,22 @@ public class PracticeActivity extends AppCompatActivity {
             return false;
     }
 
-    private void requestCameraPermission() {
-        ActivityCompat.requestPermissions(
-                this,
-                new String[] {Manifest.permission.CAMERA},
-                100
-        );
-    }
+    private ActivityResultLauncher<String> requestPermissionLauncher = registerForActivityResult(
+            new ActivityResultContracts.RequestPermission(),
+            new ActivityResultCallback<Boolean>() {
+                @Override
+                public void onActivityResult(Boolean result) {
+                    if (result) {
+                        Intent intent = new Intent(PracticeActivity.this, CameraActivity.class);
+                        intent.putExtras(bundle);
+                        startActivity(intent);
+                    }
+                    else {
+                        // TODO: what to do if permissions not given
+                    }
+                }
+            }
+    );
 
     private boolean hasCameraPermission() {
         return ContextCompat.checkSelfPermission(
