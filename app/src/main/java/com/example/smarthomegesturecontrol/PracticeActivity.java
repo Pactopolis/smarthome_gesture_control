@@ -32,15 +32,16 @@ public class PracticeActivity extends AppCompatActivity {
         if (false == checkForCamera(this)) {
             Toast.makeText(this, "NO CAMERA", Toast.LENGTH_LONG);
         }
-
-        // check for permissions
-        if (false == hasCameraPermission()) {
-            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
-        }
         else {
-            Intent intent = new Intent(this, CameraActivity.class);
-            intent.putExtras(bundle);
-            startActivity(intent);
+            // check for permissions
+            if (false == hasCameraPermission()) {
+                requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+            }
+            else {
+                Intent intent = new Intent(this, CameraActivity.class);
+                intent.putExtras(bundle);
+                startActivity(intent);
+            }
         }
     }
 
@@ -62,7 +63,7 @@ public class PracticeActivity extends AppCompatActivity {
                         startActivity(intent);
                     }
                     else {
-                        // TODO: what to do if permissions not given
+                        Toast.makeText(PracticeActivity.this, "NO PERMS", Toast.LENGTH_LONG);
                     }
                 }
             }

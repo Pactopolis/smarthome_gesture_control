@@ -38,10 +38,19 @@ import java.net.URL;
 import java.util.concurrent.ExecutionException;
 
 public class CameraActivity extends AppCompatActivity {
+    // upload constants
+    final String lineEnd = "\r\n";
+    final String twoHyphens = "--";
+    final String boundary = "*****";
+    final int maxBufferSize = 1 * 1024 * 1024;
+    final String serverPath = "http://10.0.2.2:5000/api/v1/upload";
+
+    // params from prev activity
     Bundle bundle;
     String gestureName;
     String userName;
 
+    // camera specific vars
     Recording recording = null;
     VideoCapture<Recorder> videoCapture = null;
     private PreviewView previewView;
@@ -50,9 +59,9 @@ public class CameraActivity extends AppCompatActivity {
     private TextView countdownTextView;
     private String fileName;
     private String filePath;
-    private final String serverPath = "http://10.0.2.2:5000/api/v1/upload";
     final int cameraFacing = CameraSelector.LENS_FACING_FRONT;
 
+    // 5 second timer setup
     private final int maxRecordingInterval = 5000; // 5 seconds
     private final int recordingInterval = 1000;
     private int recordingCount;
@@ -113,6 +122,7 @@ public class CameraActivity extends AppCompatActivity {
 
                 recordButton.setVisibility(Button.INVISIBLE);
                 countdownTextView.setVisibility(Button.VISIBLE);
+
                 // record
                 captureVideo();
 
@@ -172,12 +182,13 @@ public class CameraActivity extends AppCompatActivity {
             return;
         }
 
-        // increment cache
+        // get cache value for gesture; if it doesn't exist, default 1
         int currentCount = this.getSharedPreferences(
                 "constraint_cache",
                 this.MODE_PRIVATE
         ).getInt(gestureName, 1);
 
+        // update cache
         SharedPreferences.Editor editor = this.getSharedPreferences(
                 "constraint_cache",
                 this.MODE_PRIVATE
@@ -247,37 +258,30 @@ public class CameraActivity extends AppCompatActivity {
             }
             else {
                 try {
-                    HttpURLConnection conn = null;
-                    DataOutputStream dos = null;
-                    DataInputStream inStream = null;
-
-                    String lineEnd = "\r\n";
-                    String twoHyphens = "--";
-                    String boundary = "*****";
+                    HttpURLConnection httpConn = null;
+                    DataOutputStream outputStream = null;
 
                     int bytesRead, bytesAvailable, bufferSize;
                     byte[] buffer;
-                    final int maxBufferSize = 1 * 1024 * 1024;
-                    String responseFromServer = "";
 
                     FileInputStream fileInputStream = new FileInputStream(sourceFile);
                     URL url = new URL(serverUrl);
 
-                    conn = (HttpURLConnection) url.openConnection();
-                    conn.setDoInput(true);
-                    conn.setDoOutput(true);
-                    conn.setUseCaches(false);
-                    conn.setRequestMethod("POST");
-                    conn.setRequestProperty("Connection", "Keep-Alive");
-                    conn.setRequestProperty("ENCTYPE", "multipart/form-data");
-                    conn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
-                    conn.setRequestProperty("uploaded_file", fullFileName);
+                    httpConn = (HttpURLConnection) url.openConnection();
+                    httpConn.setDoInput(true);
+                    httpConn.setDoOutput(true);
+                    httpConn.setUseCaches(false);
+                    httpConn.setRequestMethod("POST");
+                    httpConn.setRequestProperty("Connection", "Keep-Alive");
+                    httpConn.setRequestProperty("ENCTYPE", "multipart/form-data");
+                    httpConn.setRequestProperty("Content-Type", "multipart/form-data;boundary=" + boundary);
+                    httpConn.setRequestProperty("uploaded_file", fullFileName);
 
-                    dos = new DataOutputStream(conn.getOutputStream());
+                    outputStream = new DataOutputStream(httpConn.getOutputStream());
 
-                    dos.writeBytes(twoHyphens + boundary + lineEnd);
-                    dos.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + fullFileName + "\"" + lineEnd);
-                    dos.writeBytes(lineEnd);
+                    outputStream.writeBytes(twoHyphens + boundary + lineEnd);
+                    outputStream.writeBytes("Content-Disposition: form-data; name=\"uploaded_file\";filename=\"" + fullFileName + "\"" + lineEnd);
+                    outputStream.writeBytes(lineEnd);
 
                     bytesAvailable = fileInputStream.available();
 
@@ -287,25 +291,25 @@ public class CameraActivity extends AppCompatActivity {
                     bytesRead = fileInputStream.read(buffer, 0, bufferSize);
 
                     while (bytesRead > 0) {
-                        dos.write(buffer, 0, bufferSize);
+                        outputStream.write(buffer, 0, bufferSize);
                         bytesAvailable = fileInputStream.available();
                         bufferSize = Math.min(bytesAvailable, maxBufferSize);
                         bytesRead = fileInputStream.read(buffer, 0, bufferSize);
                     }
 
-                    dos.writeBytes(lineEnd);
-                    dos.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
+                    outputStream.writeBytes(lineEnd);
+                    outputStream.writeBytes(twoHyphens + boundary + twoHyphens + lineEnd);
 
-                    int serverResponseCode = conn.getResponseCode();
-                    String serverResponseMessage = conn.getResponseMessage();
+                    int serverResponseCode = httpConn.getResponseCode();
+                    String serverResponseMessage = httpConn.getResponseMessage();
                     System.out.println("captureVideo(): serverResponseCode --> " + serverResponseCode);
                     System.out.println("captureVideo(): serverResponseMessage --> " + serverResponseMessage);
 
                     fileInputStream.close();
-                    dos.flush();
-                    dos.close();
+                    outputStream.flush();
+                    outputStream.close();
 
-                    BufferedReader rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    BufferedReader rd = new BufferedReader(new InputStreamReader(httpConn.getInputStream()));
                     String line;
                     while ((line = rd.readLine()) != null) {
                         System.out.println("captureVideo(): line read --> " + line);
